@@ -11,17 +11,11 @@ __email__ = "Justine.Debelius@colorado.edu"
 
 from unittest import TestCase, main
 from numpy import array, mean, median, std, sum as nsum, sqrt, ndarray
-from americangut.CatTableKeys import (check_meta,
-                                      check_data_array,
-                                      CatTable,
-                                      return_original,
-                                      return_binary,
-                                      return_binary_sum,
-                                      return_mean,
-                                      return_median,
-                                      return_stdev,
-                                      return_sum,
-                                      return_sterr)
+from americangut.CatTableKeys import (check_meta, check_data_array, CatTable,
+                                      return_original, return_binary,
+                                      return_binary_sum, return_mean,
+                                      return_median, return_stdev,
+                                      return_sum, return_sterr)
 
 
 class TestCatTableKey(TestCase):
@@ -29,17 +23,17 @@ class TestCatTableKey(TestCase):
     def setUp(self):
         """Sets up variables for testing"""
         # Sets up the values to test
-        self.common_cats = [(u'k__Bacteria', u' p__Firmicutes'),
-                            (u'k__Bacteria', u' p__Bacteroidetes'),
-                            (u'k__Bacteria', u' p__Proteobacteria'),
-                            (u'k__Bacteria', u' p__Actinobacteria'),
-                            (u'k__Bacteria', u' p__Verrucomicrobia'),
-                            (u'k__Bacteria', u' p__Tenericutes'),
-                            (u'k__Bacteria', u' p__Cyanobacteria'),
-                            (u'k__Bacteria', u' p__Fusobacteria')]
+        self.groups = [(u'k__Bacteria', u' p__Firmicutes'),
+                       (u'k__Bacteria', u' p__Bacteroidetes'),
+                       (u'k__Bacteria', u' p__Proteobacteria'),
+                       (u'k__Bacteria', u' p__Actinobacteria'),
+                       (u'k__Bacteria', u' p__Verrucomicrobia'),
+                       (u'k__Bacteria', u' p__Tenericutes'),
+                       (u'k__Bacteria', u' p__Cyanobacteria'),
+                       (u'k__Bacteria', u' p__Fusobacteria')]
 
-        self.sample_ids = ['A_Stark', 'N_Romanov', 'Z.Washburne', 'B_Allen',
-                           'F_Smythe', 'J_COBB', 'C_Xavier', 'S_Summers']
+        self.samples = ['A_Stark', 'N_Romanov', 'Z.Washburne', 'B_Allen',
+                        'F_Smythe', 'J_COBB', 'C_Xavier', 'S_Summers']
 
         self.data = array([[0.4738, 0.5646, 0.6382, 0.6170, 0.5180, 0.5609,
                             0.6557, 0.5105],
@@ -91,20 +85,20 @@ class TestCatTableKey(TestCase):
                                       'SERIES': 'X-Men'}}
         self.category = 'SEX'
         self.Case = CatTable(data=self.data,
-                             taxa=self.common_cats,
+                             taxa=self.groups,
                              meta=self.mapping,
-                             samples=self.sample_ids)
+                             samples=self.samples)
 
     # Tests check_meta
     def test_check_meta_dict(self):
         """Tests check_meta throws an error when meta is not a dictionary"""
         self.assertRaises(TypeError, check_meta, 'self.mapping',
-                          self.sample_ids, self.category)
+                          self.samples, self.category)
 
     def test_check_meta_2D_dict(self):
         """Tests check_meta throws an error when meta is not a 2D-dictionary"""
         self.assertRaises(TypeError, check_meta, self.mapping['A_Stark'],
-                          self.sample_ids, self.category)
+                          self.samples, self.category)
 
     def test_check_meta_reference_keys(self):
         """Tests check_meta throws an error when keys are not consistant"""
@@ -132,33 +126,33 @@ class TestCatTableKey(TestCase):
         """Tests that check_meta throws an error with nonsane category"""
         category = 'Sex'
         self.assertRaises(ValueError, check_meta, self.mapping,
-                          self.sample_ids, category)
+                          self.samples, category)
 
     def test_check_meta_sane_mapping(self):
         """Tests no errors are thrown when the mapping file is sane"""
-        check_meta(self.mapping, self.sample_ids, self.category)
+        check_meta(self.mapping, self.samples, self.category)
 
     # Tests check_data_array
     def test_check_data_array_data_class(self):
         """Tests check_data_array handles the wrong data class sanely"""
         self.assertRaises(TypeError, check_data_array, 'self.data',
-                          self.common_cats, self.sample_ids)
+                          self.groups, self.samples)
 
     def test_check_data_array_nonnumeric_list(self):
         """Tests check_data_array hanldes non-numeric list data sanely"""
         # Uses common cats for data, which is a list of strings
-        self.assertRaises(TypeError, check_data_array, self.common_cats,
-                          self.common_cats, self.sample_ids)
+        self.assertRaises(TypeError, check_data_array, self.groups,
+                          self.groups, self.samples)
 
     def test_check_data_array_row_names_class(self):
         """Tests check_data_array handles the wrong row_names class sanely"""
         self.assertRaises(TypeError, check_data_array, self.data,
-                          'self.common_cats', self.sample_ids)
+                          'self.groups', self.samples)
 
     def test_check_data_array_col_names_class(self):
         """Tests check_data_array handles the wrong col_names class sanely"""
         self.assertRaises(TypeError, check_data_array, self.data,
-                          self.common_cats, 'self.sample_ids')
+                          self.groups, 'self.samples')
 
     def test_check_data_array_numeric_list(self):
         """Tests check_data_array can handle a list of lists sanely"""
@@ -175,17 +169,17 @@ class TestCatTableKey(TestCase):
     def test_check_data_array_vector_unequal(self):
         """Tests check_data_array handles unequal numpy vectors correctly"""
         self.assertRaises(ValueError, check_data_array, self.data[1, :],
-                          self.common_cats, self.sample_ids)
+                          self.groups, self.samples)
 
     def test_check_data_array_matrix_unequal_rows(self):
         """Tests check_data_array handles matrixes with unequals rows sanely"""
         self.assertRaises(ValueError, check_data_array, self.data[:-2, :],
-                          self.common_cats, self.sample_ids)
+                          self.groups, self.samples)
 
     def test_data_array_matrix_unequal_cols(self):
         """Tests check_data_array handles matrixes with unequals rows sanely"""
         self.assertRaises(ValueError, check_data_array, self.data[:, :-2],
-                          self.common_cats, self.sample_ids)
+                          self.groups, self.samples)
 
     def test_return_original(self):
         """Tests that the original data set is returned"""
@@ -359,12 +353,12 @@ class TestCatTableKey(TestCase):
             test_table.check_cat_table()
 
         test_table._CatTable__data = None
-        test_table._CatTable__samples = self.sample_ids
+        test_table._CatTable__samples = self.samples
         with self.assertRaises(ValueError):
             test_table.check_cat_table()
 
         test_table._CatTable__sample = None
-        test_table._CatTable__taxa = self.common_cats
+        test_table._CatTable__taxa = self.groups
         with self.assertRaises(ValueError):
             test_table.check_cat_table()
 
@@ -377,7 +371,7 @@ class TestCatTableKey(TestCase):
         with self.assertRaises(ValueError):
             CatTable(data_type='ID',
                      match_id='P_Coulson',
-                     samples=self.sample_ids)
+                     samples=self.samples)
 
         ## Checks that data handling is sane for GROUP type data
         # Checks an error is raised when no match_id is given
@@ -395,21 +389,21 @@ class TestCatTableKey(TestCase):
                      match_id='P_Coulson',
                      category='HOME',
                      meta=self.mapping,
-                     samples=self.sample_ids,
+                     samples=self.samples,
                      data=self.data,
-                     taxa=self.common_cats)
+                     taxa=self.groups)
 
     def test_define_data_object(self):
         """Checks the output data object is created sanely"""
         ## Tests population mode
         # Defines the known value
-        known_samples = self.sample_ids
+        known_samples = self.samples
         known_data = self.data
         # Defines a CatTable instance
         test = CatTable(data_type='POP',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats)
+                        samples=self.samples,
+                        taxa=self.groups)
         test = test.define_data_object()
         # Checks the data returned is sane
         self.assertTrue((test._CatTable__table_out == known_data).all())
@@ -423,8 +417,8 @@ class TestCatTableKey(TestCase):
         test = CatTable(data_type='ID',
                         match_id='A_Stark',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats)
+                        samples=self.samples,
+                        taxa=self.groups)
         test = test.define_data_object()
         # # Checks the data returned is sane
         self.assertTrue((test._CatTable__table_out == known_data).all())
@@ -440,8 +434,8 @@ class TestCatTableKey(TestCase):
                         match_id='A_Stark',
                         category='SEX',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         meta=self.mapping)
         test = test.define_data_object()
         # # Checks the data returned is sane
@@ -463,8 +457,8 @@ class TestCatTableKey(TestCase):
                         name_disp='ID',
                         name_type='RAW',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         meta=self.mapping)
         test.define_data_object()
         test.define_name_object()
@@ -489,8 +483,8 @@ class TestCatTableKey(TestCase):
                         name_disp='ID',
                         name_type='CLEAN',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         meta=self.mapping)
         test.define_data_object()
         test.define_name_object()
@@ -505,37 +499,37 @@ class TestCatTableKey(TestCase):
 
         ## Checks output for POPULATION mode
         # Tests population display for with all mode
-        known = self.sample_ids
+        known = self.samples
         test = CatTable(data_type='POP',
                         data_mode='ALL',
                         name_disp='ID',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         meta=self.mapping)
         test.define_data_object()
         test.define_name_object()
         self.assertEqual(test._CatTable__names_out, known)
         # Test population display with a single sample and description mode
-        known = self.sample_ids
+        known = self.samples
         test = CatTable(data_type='POP',
                         data_mode='AVR',
                         name_disp='ID',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         meta=self.mapping)
         test.define_data_object()
         test.define_name_object()
         self.assertEqual(test._CatTable__names_out, ['Population'])
         # Tests population display for a single sample in Category mode
-        known = self.sample_ids
+        known = self.samples
         test = CatTable(data_type='POP',
                         data_mode='AVR',
                         name_disp='CAT',
                         data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         meta=self.mapping)
         test.define_data_object()
         test.define_name_object()
@@ -552,8 +546,8 @@ class TestCatTableKey(TestCase):
         (test_table, test_names, test_taxa, test_error) = \
             self.Case.get_table_out()
         self.assertTrue((test_table == self.data).all())
-        self.assertEqual(test_names, self.sample_ids)
-        self.assertEqual(test_taxa, self.common_cats)
+        self.assertEqual(test_names, self.samples)
+        self.assertEqual(test_taxa, self.groups)
         self.assertEqual(test_error, None)
 
         ## If we set the data mode to average and the error to standard
@@ -565,8 +559,8 @@ class TestCatTableKey(TestCase):
         known_names = ['Population']
         # Creates data object
         test = CatTable(data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         data_mode='AVR',
                         error_mode='STD')
         # Runs the function
@@ -575,7 +569,7 @@ class TestCatTableKey(TestCase):
         self.assertTrue((test_table == known_table).all())
         self.assertTrue((test_error == known_error).all())
         self.assertEqual(test_names, known_names)
-        self.assertEqual(test_taxa, self.common_cats)
+        self.assertEqual(test_taxa, self.groups)
 
         ## Tests an individual sample
         # Sets up knowns
@@ -583,8 +577,8 @@ class TestCatTableKey(TestCase):
         known_names = ['B_Allen']
         # Creates data object
         test = CatTable(data=self.data,
-                        samples=self.sample_ids,
-                        taxa=self.common_cats,
+                        samples=self.samples,
+                        taxa=self.groups,
                         data_type='ID',
                         match_id='B_Allen',
                         error_mode='STD')
@@ -594,7 +588,7 @@ class TestCatTableKey(TestCase):
         self.assertTrue((test_table == known_table).all())
         self.assertEqual(test_error, None)
         self.assertEqual(test_names, known_names)
-        self.assertEqual(test_taxa, self.common_cats)
+        self.assertEqual(test_taxa, self.groups)
 
     def test_set_name_delimiters(self):
         """Checks the name delimiters are set correctly"""
@@ -607,10 +601,10 @@ class TestCatTableKey(TestCase):
     def test_set_data(self):
         """Checks that data can be added correctly"""
         Case = CatTable()
-        Case.set_data(self.data, self.sample_ids, self.common_cats)
+        Case.set_data(self.data, self.samples, self.groups)
         self.assertTrue((Case._CatTable__data == self.data).all())
-        self.assertEqual(Case._CatTable__samples, self.sample_ids)
-        self.assertEqual(Case._CatTable__taxa, self.common_cats)
+        self.assertEqual(Case._CatTable__samples, self.samples)
+        self.assertEqual(Case._CatTable__taxa, self.groups)
 
     def test_set_metadata(self):
         """Checks the metadata is added correctly"""

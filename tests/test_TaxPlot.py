@@ -13,7 +13,7 @@ from unittest import TestCase, main
 from os import remove
 from os.path import realpath, dirname, join as pjoin, exists
 from warnings import (filterwarnings, catch_warnings)
-from numpy import array, zeros
+from numpy import array, zeros, arange
 from numpy.testing import assert_array_equal, assert_almost_equal
 from matplotlib import use
 use('agg', warn=False)
@@ -21,8 +21,8 @@ from matplotlib.legend import Legend
 from matplotlib.font_manager import FontProperties
 from matplotlib.transforms import Bbox
 import matplotlib.pyplot as plt
-from americangut.TaxPlot import TaxPlot, BarChart, PieChart
-from make_phyla_plots import translate_colorbrewer
+from TaxPlot import TaxPlot, BarChart, PieChart, ScatterPlot
+from americangut.make_phyla_plots import translate_colorbrewer
 
 # Determines the location fo the reference files
 TEST_DIR = dirname(realpath(__file__))
@@ -35,6 +35,22 @@ class TestTaxPlot(TestCase):
 
     def setUp(self):
         """Sets up variables for testing"""
+        # Sets up distributions
+        self.cont_ind = array([01.000,  2.000,  3.000,  4.000,  5.000,
+                               06.000,  7.000,  8.000,  9.000, 10.000,
+                               11.000, 12.000, 13.000, 14.000, 15.000,
+                               16.000, 17.000, 18.000, 19.000, 20.000,
+                               21.000, 22.000, 23.000, 24.000, 25.000])
+        self.cont_dep = array([5.667,  5.960,  6.501,  7.273,   7.346,
+                               08.075,  8.773,  8.799,  9.543, 09.904,
+                               10.634, 10.946, 11.545, 12.114, 12.542,
+                               12.927, 13.579, 13.935, 14.486,  14.945,
+                               15.300, 15.895, 16.623, 16.940,  17.459])
+        self.cont_err = array([00.320,  0.465,  0.674,  0.445,  0.433,
+                               00.498,  0.552,  0.344,  0.758,  0.542,
+                               00.594,  0.378,  0.390,  0.441,  0.378,
+                               00.503,  0.446,  0.445,  0.545,  0.537,
+                               00.456,  0.361,  0.562,  0.486,  0.506])
         self.data = array([[0.1, 0.2, 0.3],
                            [0.2, 0.3, 0.4],
                            [0.3, 0.4, 0.1],
@@ -68,7 +84,8 @@ class TestTaxPlot(TestCase):
                                     'colors', '_TaxPlot__colormap',
                                     '_TaxPlot__edgecolor',
                                     'show_legend', 'legend_offset',
-                                    'legend_properties', '_TaxPlot__patches',
+                                    'legend_properties', 'match_legend',
+                                    '_TaxPlot__patches',
                                     '_TaxPlot__legend', 'show_axes',
                                     'show_frame', 'axis_properties',
                                     'show_title', 'title_text',
@@ -82,7 +99,7 @@ class TestTaxPlot(TestCase):
                                  groups=self.groups,
                                  samples=self.samples,
                                  error=self.error)
-        self.bar_properties = set(['match_legend', 'bar_width', 'x_min',
+        self.bar_properties = set(['bar_width', 'x_min',
                                    'x_tick_interval', 'x_font_angle',
                                    'x_font_align', 'show_x_labels',
                                    'show_y_labels', '_BarChart__bar_left',
@@ -97,68 +114,81 @@ class TestTaxPlot(TestCase):
                                    'show_labels', 'numeric_labels',
                                    'label_distance', '_PieChart__labels',
                                    ]).union(self.base_properties)
-        self.trace_test = None
-        self.trace_properties = None
-        self.scatter_test = None
-        self.scatter_properties = None
+        self.scatter_test = ScatterPlot(data=self.cont_ind,
+                                        groups=self.cont_dep,
+                                        samples=['Basilesk Venom'])
+        self.scatter_properties = set(['show_distribution',
+                                       'show_dist_hist',
+                                       'show_reg_line', 'match_reg_line',
+                                       'show_reg_equation', 'equation_postion',
+                                       'show_r2', 'r2_position',
+                                       'connect_points', 'x_axis_dimensions',
+                                       'y_axis_dimensions', 'markers',
+                                       '_ScatterPlot__x_axes',
+                                       '_ScatterPlot__y_axes',
+                                       '_ScatterPlot__x_dist',
+                                       '_ScatterPlot__y_dist',
+                                       ]).union(self.base_properties)
+        # self.box_test = None
+        # self.box_properties = None
 
     def tearDown(self):
         """Handles teardown of the test object"""
         plt.close('all')
 
-    # Test intilization of classes
-    def test_base_init(self):
-        """Tests the base object initializes correctly"""
-        # Sets up known values for default properties
-        show_error = False
-        show_edge = False
-        colors = None
-        show_legend = False
-        legend_offset = None
-        legend_properties = {}
-        show_axes = True
-        show_frame = True
-        axis_properties = {}
-        show_title = False
-        title_text = None
-        title_properties = {}
-        use_latex = False
-        latex_family = 'sans-serif'
-        latex_font = ['Helvetica', 'Arial']
-        # Compares the properties to the known
-        self.assertTrue((self.base_test.data == self.data).all())
-        self.assertEqual(self.base_test.groups, self.groups)
-        self.assertEqual(self.base_test.samples, self.samples)
-        self.assertTrue((self.base_test.error == self.error).all())
-        self.assertEqual(self.base_test.show_error, show_error)
-        self.assertEqual(self.base_test.colors, colors)
-        self.assertEqual(self.base_test.show_edge, show_edge)
-        self.assertEqual(self.base_test.show_legend, show_legend)
-        self.assertEqual(self.base_test.legend_offset, legend_offset)
-        self.assertEqual(self.base_test.legend_properties, legend_properties)
-        self.assertEqual(self.base_test.show_axes, show_axes)
-        self.assertEqual(self.base_test.show_frame, show_frame)
-        self.assertEqual(self.base_test.axis_properties, axis_properties)
-        self.assertEqual(self.base_test.show_title, show_title)
-        self.assertEqual(self.base_test.title_text, title_text)
-        self.assertEqual(self.base_test.title_properties, title_properties)
-        self.assertEqual(self.base_test.use_latex, use_latex)
-        self.assertEqual(self.base_test.latex_family, latex_family)
-        self.assertEqual(self.base_test.latex_font, latex_font)
-        self.assertEqual(self.base_properties,
-                         self.base_test._TaxPlot__properties)
+    # # Test intilization of classes
+    # def test_base_init(self):
+    #     """Tests the base object initializes correctly"""
+    #     # Sets up known values for default properties
+    #     show_error = False
+    #     show_edge = False
+    #     colors = None
+    #     show_legend = False
+    #     legend_offset = None
+    #     legend_properties = {}
+    #     match_legend = True
+    #     show_axes = True
+    #     show_frame = True
+    #     axis_properties = {}
+    #     show_title = False
+    #     title_text = None
+    #     title_properties = {}
+    #     use_latex = False
+    #     latex_family = 'sans-serif'
+    #     latex_font = ['Helvetica', 'Arial']
+    #     # Compares the properties to the known
+    #     self.assertTrue((self.base_test.data == self.data).all())
+    #     self.assertEqual(self.base_test.groups, self.groups)
+    #     self.assertEqual(self.base_test.samples, self.samples)
+    #     self.assertTrue((self.base_test.error == self.error).all())
+    #     self.assertEqual(self.base_test.show_error, show_error)
+    #     self.assertEqual(self.base_test.colors, colors)
+    #     self.assertEqual(self.base_test.show_edge, show_edge)
+    #     self.assertEqual(self.base_test.show_legend, show_legend)
+    #     self.assertEqual(self.base_test.legend_offset, legend_offset)
+    #     self.assertEqual(self.base_test.legend_properties, legend_properties)
+    #     self.assertEqual(self.base_test.match_legend, match_legend)
+    #     self.assertEqual(self.base_test.show_axes, show_axes)
+    #     self.assertEqual(self.base_test.show_frame, show_frame)
+    #     self.assertEqual(self.base_test.axis_properties, axis_properties)
+    #     self.assertEqual(self.base_test.show_title, show_title)
+    #     self.assertEqual(self.base_test.title_text, title_text)
+    #     self.assertEqual(self.base_test.title_properties, title_properties)
+    #     self.assertEqual(self.base_test.use_latex, use_latex)
+    #     self.assertEqual(self.base_test.latex_family, latex_family)
+    #     self.assertEqual(self.base_test.latex_font, latex_font)
+    #     self.assertEqual(self.base_properties,
+    #                      self.base_test._TaxPlot__properties)
 
     # def test_bar_init(self):
     #     """Test BarChart objects are initialized correctly"""
     #      # Sets up known values for default properties
-    #     match_legend = True
     #     bar_width = 0.8
     #     x_min = -0.5
     #     x_tick_interval = 1.0
     #     x_font_angle = 45
     #     x_font_align = 'right'
     #     # Compares the properties to the known
-    #     self.assertEqual(self.bar_test.match_legend, match_legend)
     #     self.assertEqual(self.bar_test.bar_width, bar_width)
     #     self.assertEqual(self.bar_test.x_min, x_min)
     #     self.assertEqual(self.bar_test.x_tick_interval, x_tick_interval)
@@ -186,11 +216,317 @@ class TestTaxPlot(TestCase):
     #     self.assertEqual(self.pie_properties,
     #                      self.pie_test._TaxPlot__properties)
 
+    # def test_scatter_init(self):
+    #     """Checks a ScatterChart object initializes sanely"""
+    #     # Sets up the known default values
+    #     show_distribution = True
+    #     show_dist_hist = False
+    #     show_reg_line = False
+    #     match_reg_line = False
+    #     show_reg_equation = False
+    #     show_r2 = False
+    #     connect_points = False
+    #     equation_postion = ()
+    #     r2_position = ()
+    #     x_axis_dimensions = (0.09375, 0.66667, 0.62500, 0.25000)
+    #     y_axis_dimensions = (0.75000, 0.12500, 0.18750, 0.50000)
+    #     markers = ['x', 'o', '.', '^', 's', '*']
+    #     # Compares the known default properties to the instance properties
+    #     self.assertEqual(self.scatter_test.show_distribution,
+    #                      show_distribution)
+    #     self.assertEqual(self.scatter_test.show_dist_hist,
+    #                      show_dist_hist)
+    #     self.assertEqual(self.scatter_test.show_reg_line, show_reg_line)
+    #     self.assertEqual(self.scatter_test.match_reg_line, match_reg_line)
+    #     self.assertEqual(self.scatter_test.show_reg_equation,
+    #                      show_reg_equation)
+    #     self.assertEqual(self.scatter_test.equation_postion, equation_postion)
+    #     self.assertEqual(self.scatter_test.show_r2, show_r2)
+    #     self.assertEqual(self.scatter_test.r2_position, r2_position)
+    #     self.assertEqual(self.scatter_test.connect_points, connect_points)
+    #     self.assertEqual(self.scatter_test.x_axis_dimensions,
+    #                      x_axis_dimensions)
+    #     self.assertEqual(self.scatter_test.y_axis_dimensions,
+    #                      y_axis_dimensions)
+    #     self.assertEqual(self.scatter_test.markers, markers)
+    #     self.assertEqual(self.scatter_properties,
+    #                      self.scatter_test._TaxPlot__properties)
+
+    # def test_boxplot_init(self):
+    #     """Checks a BoxPlot instance initializes sanely"""
+    #     pass
+
     # def test_add_attributes(self):
     #     """Checks that keyword argument attributes can be added correctly"""
     #     show_legend = True
-    #     test = self.base_test.add_attributes(show_legend=show_legend)
-    #     self.assertEqual(test.show_legend, show_legend)
+    #     self.base_test.add_attributes(show_legend=show_legend)
+    #     self.assertEqual(self.base_test.show_legend, show_legend)
+
+    # # Tests check_base
+    # def test_check_base_show_error_class(self):
+    #     """Tests check_base throws an error when show_error is not a bool"""
+    #     self.base_test.show_error = 'foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_save_properties_class(self):
+    #     """"Checks the save_properties class handling is sane"""
+    #     self.base_test.save_properties = 'foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_fig_classs(self):
+    #     """Checks that an error is called when fig_dims class is wrong"""
+    #     # Sets up fig_dims and axis_dims
+    #     self.base_test.fig_dims = 'foo'
+    #     # Checks an error is thrown
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_heck_base_fig_dim_classs(self):
+    #     """Checks that an error is called when fig_dims class is wrong"""
+    #     # Sets up fig_dims and axis_dims
+    #     self.base_test.fig_dims = ('foo')
+    #     # Checks an error is thrown
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_set_dimensions_num_fig_dims(self):
+    #     """Checks that an error is called when fig_dims length is wrong"""
+    #     # Sets up fig_dims and axis_dims
+    #     self.base_test.fig_dims = (1, 2, 3)
+    #     # Checks an error is thrown
+    #     self.assertRaises(ValueError, self.base_test.check_base)
+
+    # def test_check_base_axis_class(self):
+    #     """Checks an error is called when axis_dims is of the wrong class"""
+    #     # Sets up fig_dims and axis_dims
+    #     self.base_test.axis_dims = 'foo'
+    #     # Checks an error is thrown
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_axis_dims_error(self):
+    #     """Checks an error is called when axis_dims is of the wrong class"""
+    #     # Sets up fig_dims and axis_dims
+    #     self.base_test.axis_dims = (1, 2, 3)
+    #     # Checks an error is thrown
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_show_edge_class(self):
+    #     """Checks the show_edge class checking is sane"""
+    #     self.base_test.show_edge = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_show_legend_class(self):
+    #     """Checks the show_edge class checking is sane"""
+    #     self.base_test.show_legend = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_legend_properties(self):
+    #     """Checks sanity of legend_properties class check"""
+    #     # Checks the show_title handling is sane
+    #     self.base_test.legend_properties = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_legend_offset(self):
+    #     """Checks sanity of legend_offset checking"""
+    #     # Checks the show_title handling is sane
+    #     self.base_test.legend_offset = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+    #     self.base_test.legend_offset = ('Foo', 'Bar', 'Cat')
+    #     self.assertRaises(ValueError, self.base_test.check_base)
+
+    # def test_check_base_match_legend_class(self):
+    #     """Checks that check_barchart handles the match_legend class sanely"""
+    #     self.base_test.match_legend = 'foo'
+    #     self.assertRaises(TypeError, self.base_test.check_barchart)
+
+    # def test_check_base_show_axes(self):
+    #     """Checks sanity of show_axes class check"""
+    #     # Checks the show_title handling is sane
+    #     self.base_test.show_axes = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_show_frame(self):
+    #     """Checks sanity of show_frame class check"""
+    #     # Checks the show_title handling is sane
+    #     self.base_test.show_frame = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_axis_properties(self):
+    #     """Checks sanity of x_axis_properties class check"""
+    #     # Checks the show_title handling is sane
+    #     self.base_test.axis_properties = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_show_title(self):
+    #     """Tests error checking on TaxPlot is sane for the show_title class"""
+    #     # Checks the show_title handling is sane
+    #     self.base_test.show_title = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_title_text(self):
+    #     """Tests error checking on TaxPlot is sane for the title_text class"""
+    #     # Checks title handling is sane.
+    #     self.base_test.title_text = ['Foo']
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_use_latex(self):
+    #     """Tests error handling with use_latex class"""
+    #     self.base_test.use_latex = 'Foo'
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # def test_check_base_latex_family_class(self):
+    #     """Chesks error handling with latex_family"""
+    #     self.base_test.latex_family = 'foo'
+    #     self.assertRaises(ValueError, self.base_test.check_base)
+
+    # def test_check_base_latex_font_class(self):
+    #     """Chesks error handling with latex_font class"""
+    #     self.base_test.latex_font = 3
+    #     self.assertRaises(TypeError, self.base_test.check_base)
+
+    # # Tests check_barchart
+    # def test_check_barchart_bar_width_class(self):
+    #     """Tests check_barchart handles bar_width class checking sanely"""
+    #     self.bar_test.bar_width = 'foo'
+    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_x_tick_interval_class(self):
+    #     """Tests check_barchart handles x_tick_interval class sanely"""
+    #     self.bar_test.x_tick_interval = 'foo'
+    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_width_and_interval(self):
+    #     """Tests check_barchart handles a greater width sanely"""
+    #     self.bar_test.bar_width = 3
+    #     self.bar_test.x_tick_interval = 1
+    #     self.assertRaises(ValueError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_x_min_class(self):
+    #     """Tests check_barchart handles x_min class sanely"""
+    #     self.bar_test.x_min = 'foo'
+    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_x_font_angle(self):
+    #     """Tests check_barchart handles x_font_angle sanely"""
+    #     self.bar_test.x_font_angle = 'foo'
+    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
+    #     self.bar_test.x_font_angle = -25
+    #     self.assertRaises(ValueError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_x_font_align(self):
+    #     """Tests check_barchart handles x_font_align sanely"""
+    #     self.bar_test.x_font_align = 'foo'
+    #     self.assertRaises(ValueError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_show_x_labels_class(self):
+    #     """Checks that check_barchart handles the show_x_labels class sanely"""
+    #     self.bar_test.show_x_labels = 'foo'
+    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
+
+    # def test_check_barchart_show_y_labels_class(self):
+    #     """Checks that check_barchart handles the show_y_labels class sanely"""
+    #     self.bar_test.show_y_labels = 'foo'
+    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
+
+    # # Tests check_piechart
+    # def test_check_piechart_plot_ccw_class(self):
+    #     """Tests checks_piechart handles plot_ccw class sanely"""
+    #     self.pie_test.plot_ccw = 'foo'
+    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_start_angle_class(self):
+    #     """Tests checks_piechart handles start_angle class sanely"""
+    #     self.pie_test.start_angle = 'foo'
+    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_start_angle_value(self):
+    #     """Tests checks_piechart handles start_angle constraints sanely"""
+    #     self.pie_test.start_angle = -1
+    #     self.assertRaises(ValueError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_axis_lims_class(self):
+    #     """Tests check_piechart throws an error axis_lims is not iterable"""
+    #     self.pie_test.axis_lims = 'foo'
+    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_axis_lims_length(self):
+    #     """Tests check_piechart errors when axis_lim length is wrong."""
+    #     self.pie_test.axis_lims = []
+    #     self.assertRaises(ValueError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_axis_lims_values(self):
+    #     """Tests check_piechart errors when the axis_min is greater"""
+    #     self.pie_test.axis_lims = [1, 0.5]
+    #     self.assertRaises(ValueError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_show_labels_class(self):
+    #     """Tests checks_piechart handles show_labels class sanely"""
+    #     self.pie_test.show_labels = 'foo'
+    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_numeric_labels_class(self):
+    #     """Tests checks_piechart handles numeric_labels class sanely"""
+    #     self.pie_test.numeric_labels = 'foo'
+    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
+
+    # def test_check_piechart_labels_distance_class(self):
+    #     """Tests checks_piechart errors when label_distance is not numeric"""
+    #     self.pie_test.label_distance = 'foo'
+    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
+
+    # # Tests check_scatter
+    # def test_check_scatter_show_distribution_class(self):
+    #     """Tests checks_scatter errors when show_distribution is not boolian"""
+    #     self.scatter_test.show_distribution = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_show_dist_hist_class(self):
+    #     """Tests checks_scatter errors when show_dist_hist is not boolian"""
+    #     self.scatter_test.show_dist_hist = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_show_reg_line_class(self):
+    #     """Tests checks_scatter errors when show_reg_line is not boolian"""
+    #     self.scatter_test.show_reg_line = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_match_reg_line_class(self):
+    #     """Tests checks_scatter errors when match_reg_line is not boolian"""
+    #     self.scatter_test.match_reg_line = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_show_r2_class(self):
+    #     """Tests checks_scatter errors when show_r2 is not boolian"""
+    #     self.scatter_test.show_r2 = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_connect_points_class(self):
+    #     """Tests checks_scatter errors when connect_points is not boolian"""
+    #     self.scatter_test.connect_points = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_equation_position_class(self):
+    #     """Tests check_scatter error when equation_positions is not a tuple"""
+    #     self.scatter_test.equation_position = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_r2_position_class(self):
+    #     """Tests check_scatter error when equation_positions is not a tuple"""
+    #     self.scatter_test.r2_position = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_x_axis_dimensions_class(self):
+    #     """Tests check_scatter errors when x_axis_dimensions is not a tuple"""
+    #     self.scatter_test.x_axis_dimensions = 'foo'
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_marker_class(self):
+    #     """Tests check_scatter errors when marker is not a reasonable class"""
+    #     self.scatter_test.markers = 3
+    #     self.assertRaises(TypeError, self.scatter_test.check_scatter)
+
+    # def test_check_scatter_marker_iterable_class(self):
+    #     """Tests check_scatter errors when iterable markers are not strings"""
+    #     self.scatter_test.markers = [1]
+    #     self.assertRaises(ValueError, self.scatter_test.check_scatter)
 
     # # Tests set_filepath
     # def test_set_filepath_no_filepath(self):
@@ -279,18 +615,95 @@ class TestTaxPlot(TestCase):
     #     self.assertTrue((self.base_test._TaxPlot__edgecolor ==
     #                      self.colormap).all())
 
-    # Tests set_dimensions
-    def test_set_dimensions_return(self):
-        """Checks set_dimensions works correctly with sane inputs"""
-         # Sets up fig_dims and axis_dis
-        self.base_test.fig_dims = (4, 6)
-        self.base_test.axis_dims = (0.2, 0.2, 0.7, 0.7)
-        self.base_test.set_dimensions()
-        axis_bounds = self.base_test._TaxPlot__axes.get_position().bounds
-        # Checks an error is thrown
-        assert_array_equal(array(list(self.base_test.fig_dims)),
-                           self.base_test._TaxPlot__fig.get_size_inches())
-        assert_almost_equal(self.base_test.axis_dims, axis_bounds, decimal=4)
+    # # Tests set_dimensions
+    # def test_set_dimensions_return(self):
+    #     """Checks set_dimensions works correctly with sane inputs"""
+    #      # Sets up fig_dims and axis_dis
+    #     self.base_test.fig_dims = (4, 6)
+    #     self.base_test.axis_dims = (0.2, 0.2, 0.7, 0.7)
+    #     self.base_test.set_dimensions()
+    #     axis_bounds = self.base_test._TaxPlot__axes.get_position().bounds
+    #     # Checks an error is thrown
+    #     assert_array_equal(array(list(self.base_test.fig_dims)),
+    #                        self.base_test._TaxPlot__fig.get_size_inches())
+    #     assert_almost_equal(self.base_test.axis_dims, axis_bounds, decimal=4)
+
+    # # Tests set_dist_dimensions
+    # def test_set_scatter_dimensions_fig_dimensions(self):
+    #     """Tests set_scatter_dimensions handles figure_dimensions correctly"""
+    #     # Sets up known dimensions
+    #     fig_dims = (4, 6)
+    #     # Updates the dimensions
+    #     self.scatter_test.fig_dims = fig_dims
+    #     self.scatter_test.set_scatter_dimensions()
+    #     # Checks the figure dimensions are sane
+    #     self.assertEqual(self.scatter_test.fig_dims, fig_dims)
+    #     assert_array_equal(self.scatter_test._TaxPlot__fig.get_size_inches(),
+    #                        array(self.scatter_test.fig_dims))
+
+    def test_set_scatter_dimensions_axes_dims_no_axes_no_show(self):
+        """Tests set_scatter_dimensions handles no axis and no show sanely"""
+        # Sets up axis dimensions
+        axis_dims = (0.2, 0.2, 0.7, 0.7)
+        # Sets up ScatterPlot properties
+        self.scatter_test.axis_dims = axis_dims
+        self.scatter_test._TaxPlot__axes = None
+        self.scatter_test.show_distribution = False
+        self.scatter_test._ScatterPlot__x_axes = None
+        self.scatter_test._ScatterPlot__y_axes = None
+        # Updates the axis dimensions
+        self.scatter_test.set_scatter_dimensions()
+        # Checks axes are created correctly
+        self.assertTrue(isinstance(self.scatter_test._TaxPlot__axes, plt.Axes))
+        self.assertTrue(self.scatter_test._ScatterPlot__x_axes is None)
+        self.assertTrue(self.scatter_test._ScatterPlot__x_axes is None)
+        # Checks the axis dimensions are sane
+        main_axis_bounds = \
+            self.scatter_test._TaxPlot__axes.get_position().bounds
+        self.assertEqual(self.scatter_test.axis_dims, axis_dims)
+        self.assertEqual(self.scatter_test.axis_dims, main_axis_bounds)
+
+    def test_set_scatter_dimensions_pre_axes_no_show(self):
+        """Tests set_scatter_dimensions handles axes and no show sanely"""
+        # Checks the default axis dimensions are set for an existing axis
+        default_dims = (0.09375, 0.125, 0.625, 0.666667)
+        self.assertTrue(isinstance(self.scatter_test._TaxPlot__axes, plt.Axes))
+        pre_axis_dims = self.scatter_test._TaxPlot__axes.get_position().bounds
+        self.assertEqual(default_dims, pre_axis_dims)
+        # Sets new axis dimenions
+        axis_dims = (0.2, 0.2, 0.7, 0.7)
+        self.scatter_test.axis_dims = axis_dims
+        self.scatter_test._TaxPlot__axes = None
+        self.scatter_test.show_distribution = False
+        self.scatter_test._ScatterPlot__x_axes = None
+        self.scatter_test._ScatterPlot__y_axes = None
+        # Updates the axis dimensions
+        self.scatter_test.set_scatter_dimensions()
+        # Checks the axes are created correctly
+        self.assertTrue(isinstance(self.scatter_test._TaxPlot__axes, plt.Axes))
+        self.assertTrue(self.scatter_test._ScatterPlot__x_axes is None)
+        self.assertTrue(self.scatter_test._ScatterPlot__x_axes is None)
+        # Checks the axis dimensions are sane
+        main_axis_bounds = \
+            self.scatter_test._TaxPlot__axes.get_position().bounds
+        self.assertEqual(self.scatter_test.axis_dims, axis_dims)
+        self.assertEqual(self.scatter_test.axis_dims, main_axis_bounds)
+        
+        
+
+
+        # Checks an axis has been created
+        # self.assertTrue(isinstance(self.scatter_test._TaxPlot__axes, plt.Axes))
+        # Checks the axis is the appropriate dimensions
+        # axis_bounds = self.base_test._TaxPlot__axes.get_position().bounds
+        # assert_array_equal(array(list(self.base_test.fig_dims)),
+        #                    self.base_test._TaxPlot__fig.get_size_inches())
+        # assert_almost_equal(self.base_test.axis_dims, axis_bounds, decimal=4)
+        # # Checks no axes exist for the x and y axes
+        # self.assertEqual(self._ScatterPlot__x_axes, None)
+        # self.assertEqual(self._ScatterPlot__y_axes, None)
+        # Checks the figure only has one set of axes
+        # self.assertEqual(len(self.base_test._TaxPlot__fig.get_axes), 1)
 
     # # Tests set_font
     # def test_set_font_unsupported_type(self):
@@ -372,217 +785,6 @@ class TestTaxPlot(TestCase):
     #     self.assertEqual(test.get_style(), known.get_style())
     #     self.assertEqual(test.get_variant(), known.get_variant())
     #     self.assertEqual(test.get_weight(), known.get_weight())
-
-    # # Tests check_base
-    # def test_check_base_show_error_class(self):
-    #     """Tests check_base throws an error when show_error is not a bool"""
-    #     self.base_test.show_error = 'foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_save_properties_class(self):
-    #     """"Checks the save_properties class handling is sane"""
-    #     self.base_test.save_properties = 'foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    def test_check_base_fig_classs(self):
-        """Checks that an error is called when fig_dims class is wrong"""
-        # Sets up fig_dims and axis_dims
-        self.base_test.fig_dims = 'foo'
-        # Checks an error is thrown
-        self.assertRaises(TypeError, self.base_test.check_base)
-
-    def test_heck_base_fig_dim_classs(self):
-        """Checks that an error is called when fig_dims class is wrong"""
-        # Sets up fig_dims and axis_dims
-        self.base_test.fig_dims = ('foo')
-        # Checks an error is thrown
-        self.assertRaises(TypeError, self.base_test.check_base)
-
-    def test_set_dimensions_num_fig_dims(self):
-        """Checks that an error is called when fig_dims length is wrong"""
-        # Sets up fig_dims and axis_dims
-        self.base_test.fig_dims = (1, 2, 3)
-        # Checks an error is thrown
-        self.assertRaises(ValueError, self.base_test.check_base)
-
-    def test_check_base_axis_class(self):
-        """Checks an error is called when axis_dims is of the wrong class"""
-        # Sets up fig_dims and axis_dims
-        self.base_test.axis_dims = 'foo'
-        # Checks an error is thrown
-        self.assertRaises(TypeError, self.base_test.check_base)
-
-    def test_check_base_axis_dims_error(self):
-        """Checks an error is called when axis_dims is of the wrong class"""
-        # Sets up fig_dims and axis_dims
-        self.base_test.axis_dims = (1, 2, 3)
-        # Checks an error is thrown
-        self.assertRaises(TypeError, self.base_test.check_base)
-
-
-    # def test_check_base_show_edge_class(self):
-    #     """Checks the show_edge class checking is sane"""
-    #     self.base_test.show_edge = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_show_legend_class(self):
-    #     """Checks the show_edge class checking is sane"""
-    #     self.base_test.show_legend = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_legend_properties(self):
-    #     """Checks sanity of legend_properties class check"""
-    #     # Checks the show_title handling is sane
-    #     self.base_test.legend_properties = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_legend_offset(self):
-    #     """Checks sanity of legend_offset checking"""
-    #     # Checks the show_title handling is sane
-    #     self.base_test.legend_offset = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-    #     self.base_test.legend_offset = ('Foo', 'Bar', 'Cat')
-    #     self.assertRaises(ValueError, self.base_test.check_base)
-
-    # def test_check_base_show_axes(self):
-    #     """Checks sanity of show_axes class check"""
-    #     # Checks the show_title handling is sane
-    #     self.base_test.show_axes = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_show_frame(self):
-    #     """Checks sanity of show_frame class check"""
-    #     # Checks the show_title handling is sane
-    #     self.base_test.show_frame = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_axis_properties(self):
-    #     """Checks sanity of x_axis_properties class check"""
-    #     # Checks the show_title handling is sane
-    #     self.base_test.axis_properties = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_show_title(self):
-    #     """Tests error checking on TaxPlot is sane for the show_title class"""
-    #     # Checks the show_title handling is sane
-    #     self.base_test.show_title = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_title_text(self):
-    #     """Tests error checking on TaxPlot is sane for the title_text class"""
-    #     # Checks title handling is sane.
-    #     self.base_test.title_text = ['Foo']
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_use_latex(self):
-    #     """Tests error handling with use_latex class"""
-    #     self.base_test.use_latex = 'Foo'
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # def test_check_base_latex_family_class(self):
-    #     """Chests error handling with latex_family"""
-    #     self.base_test.latex_family = 'foo'
-    #     self.assertRaises(ValueError, self.base_test.check_base)
-
-    # def test_check_base_latex_font_class(self):
-    #     """Chests error handling with latex_font class"""
-    #     self.base_test.latex_font = 3
-    #     self.assertRaises(TypeError, self.base_test.check_base)
-
-    # # Tests check_barchart
-    # def test_check_barchart_match_legend_class(self):
-    #     """Checks that check_barchart handles the match_legend class sanely"""
-    #     self.bar_test.match_legend = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_bar_width_class(self):
-    #     """Tests check_barchart handles bar_width class checking sanely"""
-    #     self.bar_test.bar_width = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_x_tick_interval_class(self):
-    #     """Tests check_barchart handles x_tick_interval class sanely"""
-    #     self.bar_test.x_tick_interval = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_width_and_interval(self):
-    #     """Tests check_barchart handles a greater width sanely"""
-    #     self.bar_test.bar_width = 3
-    #     self.bar_test.x_tick_interval = 1
-    #     self.assertRaises(ValueError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_x_min_class(self):
-    #     """Tests check_barchart handles x_min class sanely"""
-    #     self.bar_test.x_min = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_x_font_angle(self):
-    #     """Tests check_barchart handles x_font_angle sanely"""
-    #     self.bar_test.x_font_angle = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-    #     self.bar_test.x_font_angle = -25
-    #     self.assertRaises(ValueError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_x_font_align(self):
-    #     """Tests check_barchart handles x_font_align sanely"""
-    #     self.bar_test.x_font_align = 'foo'
-    #     self.assertRaises(ValueError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_show_x_labels_class(self):
-    #     """Checks that check_barchart handles the show_x_labels class sanely"""
-    #     self.bar_test.show_x_labels = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-
-    # def test_check_barchart_show_y_labels_class(self):
-    #     """Checks that check_barchart handles the show_y_labels class sanely"""
-    #     self.bar_test.show_y_labels = 'foo'
-    #     self.assertRaises(TypeError, self.bar_test.check_barchart)
-
-    # # Tests check_piechart
-    # def test_check_piechart_plot_ccw_class(self):
-    #     """Checks check_piechart handles plot_ccw class sanely"""
-    #     self.pie_test.plot_ccw = 'foo'
-    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_start_angle_class(self):
-    #     """Checks check_piechart handles start_angle class sanely"""
-    #     self.pie_test.start_angle = 'foo'
-    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_start_angle_value(self):
-    #     """Checks check_piechart handles start_angle constraints sanely"""
-    #     self.pie_test.start_angle = -1
-    #     self.assertRaises(ValueError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_axis_lims_class(self):
-    #     """Tests check_piechart throws an error axis_lims is not iterable"""
-    #     self.pie_test.axis_lims = 'foo'
-    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_axis_lims_length(self):
-    #     """Tests check_piechart errors when axis_lim length is wrong."""
-    #     self.pie_test.axis_lims = []
-    #     self.assertRaises(ValueError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_axis_lims_values(self):
-    #     """Tests check_piechart errors when the axis_min is greater"""
-    #     self.pie_test.axis_lims = [1, 0.5]
-    #     self.assertRaises(ValueError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_show_labels_class(self):
-    #     """Checks check_piechart handles show_labels class sanely"""
-    #     self.pie_test.show_labels = 'foo'
-    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_numeric_labels_class(self):
-    #     """Checks check_piechart handles numeric_labels class sanely"""
-    #     self.pie_test.numeric_labels = 'foo'
-    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
-
-    # def test_check_piechart_labels_distance_class(self):
-    #     """Checks check_piechart errors when label_distance is not numeric"""
-    #     self.pie_test.label_distance = 'foo'
-    #     self.assertRaises(TypeError, self.pie_test.check_piechart)
 
     # # Tests render_barchart
     # def test_render_barchart_defaults(self):
@@ -729,28 +931,30 @@ class TestTaxPlot(TestCase):
     # def test_render_piechart(self):
     #     """Checks the default rendering for the piechart"""
     #     # Generates a bar chart using the test data
-    #     test_filename = pjoin(TEST_DIR, 'files/test.svg')
-    #     test = PieChart(fig_dims=(3, 3),
-    #                     axis_dims=(0.1, 0.1, 0.8, 0.8),
-    #                     data=self.data[:, 1],
-    #                     samples=self.samples,
+    #     # test_filename = pjoin(TEST_DIR, 'files/test.svg')
+    #     test_filename = '/Users/jwdebelius/Desktop/test.pdf'
+    #     test = PieChart(data=self.data[:, 0],
+    #                     samples=[self.samples[0]],
     #                     groups=self.groups,
-    #                     colormap='RdPu',
+    #                     colors='RdPu',
     #                     filename=test_filename,
     #                     plot_ccw=False)
+    #     print test.axis_dims
+    #     print test._TaxPlot__axes
+    #     print test._TaxPlot__fig.get_axes()
     #     test.render_piechart()
     #     test.save_figure()
-    #     # Sets up the known filestring
-    #     known_file = open(pjoin(TEST_DIR, 'files/known_piechart.svg'), 'U')
-    #     known_fig = known_file.read()
-    #     known_file.close()
-    #     # Reads in the test figure
-    #     test_file = open(test_filename, 'U')
-    #     test_fig = test_file.read()
-    #     test_file.close()
-    #     self.assertEqual(known_fig, test_fig)
-    #     # Removes the test figure
-    #     remove(test_filename)
+    #     # # Sets up the known filestring
+    #     # known_file = open(pjoin(TEST_DIR, 'files/known_piechart.svg'), 'U')
+    #     # known_fig = known_file.read()
+    #     # known_file.close()
+    #     # # Reads in the test figure
+    #     # test_file = open(test_filename, 'U')
+    #     # test_fig = test_file.read()
+    #     # test_file.close()
+    #     # self.assertEqual(known_fig, test_fig)
+    #     # # Removes the test figure
+    #     # remove(test_filename)
 
     # # Tests save_figure.
     # # Other tests are included in the render_X tests (the figures get saved)

@@ -1,17 +1,26 @@
-# from numpy import array
-# from os import getcwd
+# #!/usr/bin/env python
+# TaxPlot.py
+
 from __future__ import division
 from os import mkdir, getcwd
-from os.path import splitext, split as fsplit, join as pjoin, exists, isfile
+from os.path import splitext, split as fsplit, join as pjoin, exists
+from warnings import warn, filterwarnings
 from numpy import arange, zeros, ndarray, array
 from matplotlib import use, rc
-use('agg')
+use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 from inspect import getmembers, ismethod
-from warnings import warn, filterwarnings
 from CatTableKeys import check_data_array
 from americangut.make_phyla_plots import translate_colorbrewer
+
+__author__ = "Justine Debelius"
+__copyright__ = "Copyright 2014,"
+__credits__ = ["Justine Debelius"]
+__license__ = "BSD"
+__version__ = "unversioned"
+__maintainer__ = "Justine Debelius"
+__email__ = "Justine.Debelius@colorado.edu"
 
 # Sets up warning activity to always
 filterwarnings("always")
@@ -29,9 +38,9 @@ class TaxPlot:
     show_error = False
     __error_bars = []
     # Sets up figure and axis properties
-    fig_dims = None
-    __fig = plt.figure()
-    axis_dims = None
+    fig_dims = (3, 3)
+    __fig = plt.figure(figsize=(3, 3))
+    axis_dims = (0.1, 0.1, 0.8, 0.8)
     __axes = None
     # Sets up saving information
     __filepath = None
@@ -47,13 +56,19 @@ class TaxPlot:
     show_legend = False
     legend_offset = None
     legend_properties = {}
-    match_legend = True
     __patches = []
     __legend = None
     # Handles axis properties
     show_axes = True
     show_frame = True
-    axis_properties = {}
+    xlim = None
+    ylim = None
+    xticks = None
+    yticks = None
+    xticklabels = None
+    yticklabels = None
+    xlabel = None
+    ylabel = None
     # Handles the title
     show_title = False
     title_text = None
@@ -63,10 +78,36 @@ class TaxPlot:
     use_latex = False
     latex_family = 'sans-serif'
     latex_font = ['Helvetica', 'Arial']
+    priority = 'CURRENT'
     __properties = None
+    __defaults = {'show_error': None,
+                  'fig_dims': None,
+                  'axis_dims': None,
+                  'save_properties': {},
+                  'show_edge': False,
+                  'colors': None,
+                  'show_legend': False,
+                  'legend_offset': None,
+                  'legend_properties': {},
+                  'show_axes': True,
+                  'show_frame': True,
+                  'xlim': None,
+                  'ylim': None,
+                  'xticks': None,
+                  'yticks': None,
+                  'xticklabels': None,
+                  'yticklabels': None,
+                  'xlabel': None,
+                  'ylabel': None,
+                  'show_title': False,
+                  'title_text': None,
+                  'title_properties': {},
+                  'use_latex': False,
+                  'latex_family': 'sans-serif',
+                  'latex_font': ['Helvetica', 'Arial']}
 
     # Handles font-related arguments
-    __font_set = {'title': FontProperties(family='sans-serif', size=30),
+    __font_set = {'title': FontProperties(family='sans-serif', size=25),
                   'label': FontProperties(family='sans-serif', size=20),
                   'leg': FontProperties(family='sans-serif', size=15),
                   'tick':  FontProperties(family='sans-serif', size=15),
@@ -81,18 +122,20 @@ class TaxPlot:
         self.samples = samples
         self.error = error
 
+        self._TaxPlot__axes = self._TaxPlot__fig.add_axes(self.axis_dims)
+
         # Adds keyword arguments
         self.add_attributes(**kwargs)
 
         # Sets up the filepath
         self.set_filepath(filename)
         # Sets up figure and axis properties
-        self.set_dimensions()
+        self.update_dimensions()
         # Sets up the colormap
-        self.set_colormap()
+        self.update_colormap()
 
         # Checks the structure is good
-        self.check_base()
+        self.checkbase()
 
     def add_attributes(self, **kwargs):
         """Adds keyword arguments to the object"""
@@ -115,11 +158,12 @@ class TaxPlot:
             else:
                 raise ValueError('%s is not a TaxPlot property.' % k)
 
-    def check_base(self):
+    def checkbase(self):
         """Checks that variables in TaxPlot are sane"""
         # Checks the data array is supported
         self.data = check_data_array(self.data, self.groups, self.samples,
                                      'data', 'groups', 'samples')
+
         # If the error is present, checks the error is supported
         if self.error is not None:
             self.error = check_data_array(self.error, self.groups,
@@ -169,10 +213,6 @@ class TaxPlot:
         if not isinstance(self.legend_properties, dict):
             raise TypeError('legend_properties must be a dictionary')
 
-        # Checks the match_legend class
-        if not isinstance(self.match_legend, bool):
-            raise TypeError('match_legend must be a boolian')
-
         # Checks the show_axes argument is sane
         if not isinstance(self.show_axes, bool):
             raise TypeError('show_axes must be a boolian')
@@ -181,9 +221,77 @@ class TaxPlot:
         if not isinstance(self.show_frame, bool):
             raise TypeError('show_frame must be boolian')
 
-        # Checks the axis_properties arguments are sane
-        if not isinstance(self.axis_properties, dict):
-            raise TypeError('axis_properties must be a dict')
+        # Checks the xlim argument are sane
+        if self.xlim is not None:
+            if not isinstance(self.xlim, list):
+                raise TypeError('xlim must be a list')
+
+            if not len(self.xlim) == 2:
+                raise ValueError('xlim must be a two element list')
+
+            xmin_num = isinstance(self.xlim[0], (int, float))
+            xmax_num = isinstance(self.xlim[1], (int, float))
+            if not (xmin_num and xmax_num):
+                raise TypeError('xlim must be a list of numbers.')
+
+        # Checks the ylim argument is sane
+        if self.ylim is not None:
+            if not isinstance(self.ylim, list):
+                raise TypeError('ylim must be a list')
+
+            if not len(self.ylim) == 2:
+                raise ValueError('ylim must be a two element list')
+
+            ymin_num = isinstance(self.ylim[0], (int, float))
+            ymax_num = isinstance(self.ylim[1], (int, float))
+            if not (ymin_num and ymax_num):
+                raise TypeError('ylim must be a list of numbers.')
+
+        # Checks the xtick argument is sane
+        xticks = self.xticks is not None
+        if xticks:
+            if not isinstance(self.xticks, (list, ndarray)):
+                raise TypeError('xticks must be a list of numbers')
+            for xtick in self.xticks:
+                if not isinstance(xtick, (float, int)):
+                    raise TypeError('xticks must be a list of numbers')
+
+        # Checks the xticklabel argument is sane
+        if self.xticklabels is not None:
+            if not isinstance(self.xticklabels, list):
+                raise TypeError('xticklabels must be a list of strings')
+            for xlabel in self.xticklabels:
+                if not isinstance(xlabel, str):
+                    raise TypeError('xticklabels must be a list of strings')
+            if not xticks or not len(self.xticks) == len(self.xticklabels):
+                raise ValueError('Each xticklabel must correspond to a tick.')
+
+        # Checks the ytick argument is sane
+        yticks = self.yticks is not None
+        if yticks:
+            if not isinstance(self.yticks, (list, ndarray)):
+                raise TypeError('yticks must be a list of numbers')
+            for ytick in self.yticks:
+                if not isinstance(ytick, (float, int)):
+                    raise TypeError('yticks must be a list of numbers')
+
+        # Checks the yticklabel argument is sane
+        if self.yticklabels is not None:
+            if not isinstance(self.yticklabels, list):
+                raise TypeError('yticklabels must be a list of strings')
+            for xlabel in self.yticklabels:
+                if not isinstance(xlabel, str):
+                    raise TypeError('yticklabels must be a list of strings')
+            if not yticks or not len(self.yticks) == len(self.yticklabels):
+                raise ValueError('Each yticklabel must correspond to a tick.')
+
+        # Checks the xlabel argument is sane
+        if self.xlabel is not None and not isinstance(self.xlabel, str):
+            raise TypeError('xlabel must be a string.')
+
+        # Checks the ylabel argument is sane
+        if self.ylabel is not None and not isinstance(self.ylabel, str):
+            raise TypeError('ylabel must be a string.')
 
         # Checks show_title is sane
         if not isinstance(self.show_title, bool):
@@ -209,38 +317,77 @@ class TaxPlot:
         if not isinstance(self.latex_font, (str, list)):
             raise TypeError('latex font must be a string, or list of strings')
 
-    def write_object_parameters(self, params_file):
-        """Writes the parameters into a text file"""
-        # Writes the parameters string
-        class_name = self.__class__
-        print class_name
-        object_attributes = self.getmembers()
-        params_string = []
-        for prop in self._TaxPlot__properties:
-            if prop in set(['data', 'error', 'samples', 'groups',
-                            '_TaxPlot__properties']):
-                continue
-            att = object_attributes[prop]
-            params_string.append('%s:%s\t%r' % (class_name, prop, att))
-        # Writes the parameters file
-        if isfile(params_file):
-            warn('%s already exists.\nIt will be overwritten.', UserWarning)
-        target = open(params_file, 'w')
-        target.truncate()
-        target.write('\n'.join(params_string))
-        target.close()
+        # Checks priority is sane
+        if self.priority not in set(['CURRENT', 'IMPORTED']):
+            raise ValueError('priority must be "CURRENT" or "IMPORTED.')
 
-    def read_object_parameters(self, params_file):
-        """"""
-        pass
+    def __get_current_parameters(self):
+        """Determines the current state of all modifiable parameters"""
+        # Gets all the parameters in the object
+        all_attributes = getmembers(self)
+        # Determines the parameters to be ignored
+        exclude = set(['data', 'error', 'samples', 'groups', 'proprity'])
+        important_set = set(self._TaxPlot__properties).difference(exclude)
+        # Builds a dictionary of the parameter state
+        current = {}
+        for (attr, val) in all_attributes:
+            if not attr in important_set or '__' in attr:
+                continue
+            prop = '%s' % attr
+            current[prop] = val
+
+        return current
+
+    def write_parameters(self):
+        """Writes the parameters into a string"""
+        # Getes the object class
+        class_name = self.__class__
+        class_name = '%r' % class_name
+        classname = class_name.split('.')[-1].split(' ')[0]
+        # Gets the parameters and writes the string
+        current = self._TaxPlot__get_current_parameters()
+        params_string = ['%s\t%s' % (att, val) for (att, val) in
+                         current.iteritems()]
+        params_string[0] = '%s:%s' % (classname, params_string[0])
+        return ('\n%s:' % classname).join(sorted(params_string))
+
+    def read_parameters(self, params_str):
+        """Reads parameters from a string"""
+        # Determines the object class
+        class_name = self.__class__
+        class_name = '%r' % class_name
+        classname = class_name.split('.')[-1].split(' ')[0]
+        # Defines the set of classes for which parameters will be considered.
+        readable = set([classname, 'TaxPlot'])
+        # Determines the parameters which already exist
+        current = self._TaxPlot__get_current_parameters()
+        default = self._TaxPlot__defaults
+        # Reads in the imported parameters
+        params = {}
+        imported = {}
+        lines = [l for l in params_str.split('\n')]
+        for l in lines:
+            (script, param_set) = l.split(':')
+            # Determines the import value
+            if script not in readable:
+                continue
+            (attr, val_str) = param_set.split('\t')
+            val = eval(val_str)
+            imported[attr] = val
+            # Determines the state of the property compared to the default
+            imported_default = imported[attr] == default[attr]
+            current_default = current[attr] == default[attr]
+            if not imported_default and current_default:
+                params[attr] = imported[attr]
+            elif not (imported_default or current_default):
+                if self.priority == 'IMPORTED':
+                    params[attr] = imported[attr]
+        # Updates the object properties
+        self.add_attributes(**params)
 
     def get_colormap(self):
         """Retuns the colormap and edgecolor as numpy arrays"""
         return self._TaxPlot__colormap, self._TaxPlot__edgecolor
-
-    def get_dimensions(self):
-        """Returns the figure and axis dimensions"""
-        return self._TaxPlot__fig_dims, self._TaxPlot__axis_dims
 
     def get_filepath(self):
         """Returns the save filepath"""
@@ -271,26 +418,12 @@ class TaxPlot:
         else:
             raise TypeError('filepath must be a string')
 
-    def set_dimensions(self):
-        """Updates the axis and figure dimensions for a single axis.
+    def update_dimensions(self):
+        """Updates the axis and figure dimensions for a single axis."""
+        self._TaxPlot__fig.set_size_inches(self.fig_dims)
+        self._TaxPlot__axes.set_position(self.axis_dims)
 
-        Please note that set_dist_dimensions is a better function to use when
-        plotting data with its corresponding x and y distributions."""
-        if isinstance(self._TaxPlot__fig, plt.Figure):
-            self._TaxPlot__fig.set_size_inches(self.fig_dims)
-        if isinstance(self._TaxPlot__axes, plt.Axes):
-            self._TaxPlot__axes.set_position(self.axis_dims)
-        else:
-            self._TaxPlot__axes = self._TaxPlot__fig.add_axes(self.axis_dims)
-
-        # Checks the appropraite number of axes are shown.
-        current_axes = self._TaxPlot__fig.get_axes()
-        if current_axes > 1:
-            for axis in current_axes:
-                if not axis.get_position().bounds == self.axis_dims:
-                    axis.set_axis_off()
-
-    def set_colormap(self, **kwargs):
+    def update_colormap(self, **kwargs):
         """Updates the colormap and egde color"""
         # Check colormap is a sane classs
         no_colors = self.colors is None
@@ -303,8 +436,10 @@ class TaxPlot:
 
         # Handles the colormap is no data is avaliable
         if self.data is not None:
+            if len(self.data.shape) == 1:
+                self.data = (array([[1]])*self.data).transpose()
             # Determines the number of rows in the data array
-            num_rows = self.data.shape[0]
+            (num_rows, num_cols) = self.data.shape
 
             # Sets up the colormap when none is provided (default is a gray
             # scale)
@@ -327,6 +462,8 @@ class TaxPlot:
                 num_colors = len(self.colors[:, 0])
                 if num_colors >= num_rows:
                     self._TaxPlot__colormap = self.colors[:(num_rows), :]
+                elif num_colors >= num_cols and num_cols < num_rows:
+                    self._TaxPlot__colormap = self.colors[:(num_cols), :]
                 else:
                     raise ValueError('The colormap cannot be used. \nNot'
                                      ' enough colors have been supplied.')
@@ -355,16 +492,13 @@ class TaxPlot:
         self.add_attributes(**kwargs)
 
         # Checks the class is sane
-        self.check_base()
+        self.checkbase()
 
         # If show_legend is off or there is no potted data, the legend
         # is not updated.
         if self.show_legend and len(self._TaxPlot__patches) > 0:
             # Adds the legend
-            if self.match_legend:
-                patches = reversed(self._TaxPlot__patches)
-            else:
-                patches = self._TaxPlot__patches
+            patches = reversed(self._TaxPlot__patches)
             font = self._TaxPlot__font_set['leg']
             self._TaxPlot__legend = \
                 self._TaxPlot__axes.legend(patches, self.groups, prop=font,
@@ -379,15 +513,16 @@ class TaxPlot:
         self.add_attributes(**kwargs)
 
         # Checks the class is sane
-        self.check_base()
+        self.checkbase()
 
         # A title is not added is there are no axes
         if self._TaxPlot__axes is not None and self.show_title:
             # Checks to see that a title can be added
             title_font = self._TaxPlot__font_set['title']
-            self._TaxPlot__axes.set_title(self.title_text,
-                                          fontproperties=title_font,
-                                          **self.title_properties)
+            self._TaxPlot__title = \
+                self._TaxPlot__axes.set_title(self.title_text,
+                                              fontproperties=title_font,
+                                              **self.title_properties)
 
     def save_figure(self):
         """Saves the rendered figure"""
@@ -399,9 +534,9 @@ class TaxPlot:
                 mkdir(self._TaxPlot__filepath)
             # Saves the file
             if len(self.save_properties) > 0:
-                self._TaxPlot__fig.savefig(filename, **self.save_properties)
+                plt.savefig(filename, **self.save_properties)
             else:
-                self._TaxPlot__fig.savefig(filename)
+                plt.savefig(filename)
 
     def return_figure(self):
         """Returns the figure object"""
@@ -415,411 +550,339 @@ class TaxPlot:
                           self.latex_family: self.latex_font})
 
 
-class BarChart(TaxPlot):
-    """Doc string here"""
-    # Sets up barchart specific properties
-    bar_width = 0.8
-    x_tick_interval = 1.0
-    x_min = -0.5
-    x_font_angle = 45
-    x_font_align = 'right'
-    show_x_labels = True
-    show_y_labels = True
-    __bar_left = None
-    __all_faces = []
+# class BarChart(TaxPlot):
+#     """Doc string here"""
+#     # Sets up barchart specific properties
+#     bar_width = 0.8
+#     xtick_interval = 1.0
+#     ytick_interval = 0.2
+#     xmin = -0.5
+#     x_font_angle = 45
+#     x_font_align = 'right'
+#     show_x_labels = True
+#     show_y_labels = True
+#     __bar_left = None
+#     __all_faces = []
+#     __defaults = {'show_error': None,
+#                   'fig_dims': (6, 4),
+#                   'axis_dims': (0.125, 0.1875, 0.75, 0.83334),
+#                   'save_properties': {},
+#                   'show_edge': False,
+#                   'colors': None,
+#                   'show_legend': False,
+#                   'legend_offset': None,
+#                   'legend_properties': {},
+#                   'show_axes': True,
+#                   'show_frame': True,
+#                   'xlim': None,
+#                   'ylim': [0, 1],
+#                   'xticks': None,
+#                   'yticks': None,
+#                   'xticklabels': None,
+#                   'yticklabels': None,
+#                   'show_title': False,
+#                   'title_text': None,
+#                   'title_properties': {},
+#                   'use_latex': False,
+#                   'latex_family': 'sans-serif',
+#                   'latex_font': ['Helvetica', 'Arial'],
+#                   'bar_wdith': 0.8,
+#                   'xtick_interval': 1.0,
+#                   'ytick_interval': 0.2,
+#                   'xmin': -0.5,
+#                   'x_font_angle': 45,
+#                   'x_font_align': 'right',
+#                   'show_x_labels': True,
+#                   'show_y_labels': True}
 
-    def __init__(self, data, groups, samples, error=None, filename=None,
-                 **kwargs):
-        """Initializes a BarChart instance"""
-        # Sets up the default figure and axis dimensions assuming there is
-        # no legend displayed.
-        self.fig_dims = (6, 4)
-        self.axis_dims = (0.125, 0.1875, 0.75, 0.83334)
-        # Initialzes the object
-        TaxPlot.__init__(self, data, groups, samples, error, filename,
-                         **kwargs)
+#     def __init__(self, data, groups, samples, error=None, filename=None,
+#                  **kwargs):
+#         """Initializes a BarChart instance"""
+#         # Sets up the default figure and axis dimensions assuming there is
+#         # no legend displayed.
+#         # Sets up the default values
+#         if 'fig_dims' not in kwargs:
+#             kwargs['fig_dims'] = (6, 4)
+#         if 'axis_dims' not in kwargs:
+#             kwargs['axis_dims'] = (0.125, 0.1875, 0.75, 0.83334)
+#         if 'ylim' not in kwargs:
+#             kwargs['ylim'] = [0, 1]
+#         # Initialzes the object
+#         TaxPlot.__init__(self, data, groups, samples, error, filename,
+#                          **kwargs)
+#         # Checks the object is sane
+#         self.check_barchart()
 
-        self.check_barchart()
+#     def check_barchart(self):
+#         """Checks the additional properties of BarChart instance are sane"""
+#         # Checks the base object initializes sanely
+#         self.checkbase()
 
-    def check_barchart(self):
-        """Checks the additional properties of BarChart instance are sane"""
-        # Checks the base object initializes sanely
-        self.check_base()
+#         # Checks the bar_width class
+#         if not isinstance(self.bar_width, (int, float)):
+#             raise TypeError('bar_width must be a number')
+#         # Checks the xtick_interval class
+#         if not isinstance(self.xtick_interval, (int, float)):
+#             raise TypeError('xtick_interval must be a number')
+#         # Checks the bar_width is not greater than the xtick_interval
+#         if self.bar_width > self.xtick_interval:
+#             raise ValueError('The bar_width cannot be greater than the '
+#                              'xtick_interval.')
 
-        # Checks the bar_width class
-        if not isinstance(self.bar_width, (int, float)):
-            raise TypeError('bar_width must be a number')
-        # Checks the x_tick_interval class
-        if not isinstance(self.x_tick_interval, (int, float)):
-            raise TypeError('x_tick_interval must be a number')
-        # Checks the bar_width is not greater than the x_tick_interval
-        if self.bar_width > self.x_tick_interval:
-            raise ValueError('The bar_width cannot be greater than the '
-                             'x_tick_interval.')
+#         # Checks the xmin argument
+#         if not isinstance(self.xmin, (int, float)):
+#             raise TypeError('xmin must be a number')
 
-        # Checks the x_min argument
-        if not isinstance(self.x_min, (int, float)):
-            raise TypeError('x_min must be a number')
+#         # Checks x_font_angle is handled sanely
+#         if not isinstance(self.x_font_angle, (int, float)):
+#             raise TypeError('x_font_angle must be a number')
+#         if not 0 <= self.x_font_angle < 360:
+#             raise ValueError('x_font_angle is in degrees.\n'
+#                              'Values must be between 0 and 360,')
 
-        # Checks x_font_angle is handled sanely
-        if not isinstance(self.x_font_angle, (int, float)):
-            raise TypeError('x_font_angle must be a number')
-        if not 0 <= self.x_font_angle < 360:
-            raise ValueError('x_font_angle is in degrees.\n'
-                             'Values must be between 0 and 360,')
+#         # Checks the x_font_align argument
+#         alignments = set(['left', 'right', 'center'])
+#         if self.x_font_align not in alignments:
+#             raise ValueError('%s is not a supported font alignment.'
+#                              % self.x_font_align)
 
-        # Checks the x_font_align argument
-        alignments = set(['left', 'right', 'center'])
-        if self.x_font_align not in alignments:
-            raise ValueError('%s is not a supported font alignment.'
-                             % self.x_font_align)
+#         # Checks show_x_labels is sane
+#         if not isinstance(self.show_x_labels, bool):
+#             raise TypeError('show_x_labels must be a boolian')
 
-        # Checks show_x_labels is sane
-        if not isinstance(self.show_x_labels, bool):
-            raise TypeError('show_x_labels must be a boolian')
+#         # Checks show_y_labels is sane
+#         if not isinstance(self.show_y_labels, bool):
+#             raise TypeError('show_y_labels must be a boolian')
 
-        # Checks show_y_labels is sane
-        if not isinstance(self.show_y_labels, bool):
-            raise TypeError('show_y_labels must be a boolian')
+#     def render_barchart(self):
+#         """Plots the data as a stacked barchart"""
+#         # Checks the input data object is sane
+#         self.check_barchart()
+#         # Updates variable properties
+#         self.update_colormap()
+#         self.update_dimensions()
 
-    def render_barchart(self):
-        """Plots the data as a stacked barchart"""
-        # Checks the input data object is sane
-        self.check_barchart()
+#         # Sets things up to render using LaTex
+#         self.render_latex()
 
-        # Sets things up to render using LaTex
-        self.render_latex()
+#         # Sets up the x_axis properties
+#         num_samples = len(self.samples)
+#         self.xticks = arange(num_samples) * self.xtick_interval
+#         xmax = max(self.xticks)+self.xtick_interval/2
+#         self.xlim = [self.xmin, xmax]
+#         # Updates the left side for the barchart
+#         self._BarChart__bar_left = self.xticks - self.bar_width/2
 
-        # Sets up the x_axis properties
-        num_samples = len(self.samples)
-        x_ticks = arange(num_samples)
-        x_max = self.x_min + num_samples*self.x_tick_interval
-        self.axis_properties['xlim'] = [self.x_min, x_max]
-        self.axis_properties['xticks'] = x_ticks
-        # Updates the left side for the barchart
-        self._BarChart__bar_left = x_ticks - self.bar_width/2
+#         # Plots the data
+#         for count, category in enumerate(self.data):
+#             bottom_bar = sum(self.data[0:count, :], 0)
+#             count_rev = len(self.groups) - (1 + count)
+#             facecolor = self._TaxPlot__colormap[count_rev, :]
+#             edgecolor = self._TaxPlot__edgecolor[count_rev, :]
+#             if self.show_error and self.error is not None:
+#                 error = self.error[count, :]
+#             else:
+#                 error = None
+#             faces = self._TaxPlot__axes.bar(left=self._BarChart__bar_left,
+#                                             height=category,
+#                                             width=self.bar_width,
+#                                             bottom=bottom_bar,
+#                                             color=facecolor,
+#                                             edgecolor=edgecolor,
+#                                             yerr=error,
+#                                             ecolor=array([0, 0, 0]))
+#             self._BarChart__all_faces.append(faces)
+#             self._TaxPlot__patches.append(faces[0])
 
-        # Plots the data
-        for count, category in enumerate(self.data):
-            bottom_bar = sum(self.data[0:count, :], 0)
-            if self.match_legend:
-                count_rev = len(self.groups) - (1 + count)
-                facecolor = self._TaxPlot__colormap[count_rev, :]
-                edgecolor = self._TaxPlot__edgecolor[count_rev, :]
-            else:
-                facecolor = self._TaxPlot__colormap[count, :]
-                edgecolor = self._TaxPlot__edgecolor[count, :]
-            if self.show_error and self.error is not None:
-                error = self.error[count, :]
-            else:
-                error = None
-            faces = self._TaxPlot__axes.bar(left=self._BarChart__bar_left,
-                                            height=category,
-                                            width=self.bar_width,
-                                            bottom=bottom_bar,
-                                            color=facecolor,
-                                            edgecolor=edgecolor,
-                                            yerr=error,
-                                            ecolor=array([0, 0, 0]))
-            self._BarChart__all_faces.append(faces)
-            self._TaxPlot__patches.append(faces[0])
+#         # Sets up the x tick labels
+#         if self.show_x_labels:
+#             self.xticklabels = self.samples
+#         else:
+#             self.xticklabels = ['']*num_samples
 
-        # Updates the x-axis properties
-        self._TaxPlot__axes.set_xlim(self.axis_properties['xlim'])
-        self._TaxPlot__axes.set_xticks(self.axis_properties['xticks'])
+#       # Gets the y axis properties if they are not known
+#         if self.ylim is None:
+#             self.ylim = self._TaxPlot__axes.get_ylim()
+#         if self.yticks is None:
+#             ymin = self.ylim[0]
+#             ymax = self.ylim[1]+self.ytick_interval
+#             self.yticks = arange(ymin, ymax, self.ytick_interval)
+#         if self.yticklabels is None and self.show_y_labels:
+#             self.yticklabels = map(str, self.yticks)
+#         elif self.yticklabels is None:
+#             self.yticklabels = ['']*len(self.yticks)
 
-        # Matches the plotting axis if necessary
-        y_ticks = self._TaxPlot__axes.get_yticks()
+#         # Updates the axis properties
+#         self._TaxPlot__axes.set_xlim(self.xlim)
+#         self._TaxPlot__axes.set_xticks(self.xticks)
+#         self._TaxPlot__axes.set_ylim(self.ylim)
+#         self._TaxPlot__axes.set_yticks(self.yticks)
 
-        # Sets up the x tick labels
-        if self.show_x_labels:
-            self.axis_properties['xticklabels'] = self.samples
-        else:
-            self.axis_properties['xticklabels'] = ['']*num_samples
+#         # Updates the label text
+#         tick_font = self._TaxPlot__font_set['tick']
+#         x_align = self.x_font_align
+#         self._TaxPlot__axes.set_xticklabels(self.xticklabels,
+#                                             fontproperties=tick_font,
+#                                             rotation=self.x_font_angle,
+#                                             horizontalalignment=x_align)
+#         self._TaxPlot__axes.set_yticklabels(self.yticklabels,
+#                                             fontproperties=tick_font)
 
-        # Updates the y tick labels
-        if self.show_y_labels:
-            self.axis_properties['yticklabels'] = map(str, y_ticks)
-        else:
-            self.axis_properties['yticklabels'] = ['']*len(y_ticks)
+#         label_font = self._TaxPlot__font_set['label']
+#         self._TaxPlot__axes.set_xlabel(self.xlabel, fontproperties=label_font)
+#         self._TaxPlot__axes.set_ylabel(self.ylabel, fontproperties=label_font)
 
-        # Updates the axis to include the appropriate x and y tick labels
-        xticklabels = self.axis_properties['xticklabels']
-        yticklabels = self.axis_properties['yticklabels']
-        tick_font = self._TaxPlot__font_set['tick']
-        x_align = self.x_font_align
-        self._TaxPlot__axes.set_xticklabels(xticklabels,
-                                            fontproperties=tick_font,
-                                            rotation=self.x_font_angle,
-                                            horizontalalignment=x_align)
-        self._TaxPlot__axes.set_yticklabels(yticklabels,
-                                            fontproperties=tick_font)
+#         # Adds a legend
+#         self.render_legend()
 
-        # Adds a legend
-        self.render_legend()
-
-        # Adds a title
-        self.render_title()
-
-
-class PieChart(TaxPlot):
-    """Doc String Here"""
-    # Sets up pie chart specific properties
-    plot_ccw = False
-    start_angle = 90
-    axis_lims = [-1.1, 1.1]
-    show_labels = False
-    numeric_labels = False
-    label_distance = 1.1
-    __labels = None
-
-    def __init__(self, data, groups, samples, filename=None, **kwargs):
-        """Initializes a PieChart instance"""
-        # Sets up the piechart with a legend.
-        self.fig_dims = (5, 3)
-        self.axis_dims = (0.06, 0.1, 0.48, 0.8)
-        self.show_legend = True
-        self.legend_offset = (1.8, 0.75)
-        # Initializes the object
-        TaxPlot.__init__(self, data, groups, samples, error=None,
-                         filename=filename, **kwargs)
-
-        self.check_piechart()
-
-    def check_piechart(self):
-        """Checks the PieChart parameters are sane"""
-        # Preforms an initial check of the data
-        self.check_base()
-
-        # Checks the sanity of the plot_ccw argument
-        if not isinstance(self.plot_ccw, bool):
-            raise TypeError('plot_ccw must be boolian.')
-
-        # Checks the sanity of the start_angle argument
-        if not isinstance(self.start_angle, (int, float)):
-            raise TypeError('start_angle must be an angle between 0 and '
-                            '365 degrees.')
-        if not 0 <= self.start_angle < 360:
-            raise ValueError('start_angle must be an angle between 0 and '
-                             '365 degrees.')
-
-        # Checks the sanity of the axis_lims class
-        if not isinstance(self.axis_lims, (list, tuple)):
-            raise TypeError('axis_lims must be an iterable class')
-        if not len(self.axis_lims) == 2:
-            raise ValueError('axis_lims must be a two-element iterable class.')
-        if self.axis_lims[1] < self.axis_lims[0]:
-            raise ValueError('The first axis lim must be smaller than the '
-                             'second.')
-
-        # Checks the sanity of the show_labels argument
-        if not isinstance(self.show_labels, bool):
-            raise TypeError('show_labels must be boolian.')
-
-        if not isinstance(self.numeric_labels, bool):
-            raise TypeError('numeric_labels must be boolian.')
-
-        # Checks the label distance
-        if not isinstance(self.label_distance, (int, float)):
-            raise TypeError('label distance must be numeric')
-
-    def render_piechart(self):
-        """Plots the data as a Pie Chart"""
-        # Checks the object for rendering
-        self.check_piechart()
-
-        # Updates the latex rendering
-        self.render_latex()
-
-        # Warns the user if the data is more than one dimension
-        data_shape = self.data.shape
-        data_len = len(data_shape)
-        if data_len > 1 and not (data_shape[0] == 1 or data_shape[1] == 1):
-            warn('Data is a two-dimensional array. \nOnly the first '
-                 'data column will be plotted.', UserWarning)
-            self.data = self.data[:, 0]
-
-        # Handles the data labels
-        if self.show_labels and self.numeric_labels:
-            labels = map(str, self.data)
-        elif self.show_labels:
-            labels = map(str, self.groups)
-        else:
-            labels = ['']*len(self.groups)
-
-        # Plots the data clockwise
-        [pie_patches, pie_labels] = \
-            self._TaxPlot__axes.pie(x=self.data,
-                                    labels=labels,
-                                    labeldistance=self.label_distance,
-                                    shadow=False,
-                                    startangle=self.start_angle)
-
-        # Colors the data
-        label_font = self._TaxPlot__font_set['label']
-        for idx, patch in enumerate(pie_patches):
-            patch.set_facecolor(self._TaxPlot__colormap[idx, :])
-            patch.set_edgecolor(self._TaxPlot__edgecolor[idx, :])
-            pie_labels[idx].set_font_properties(label_font)
-
-        # Updates the holding object
-        self._TaxPlot__patches = pie_patches
-        self._PieChart__labels = pie_labels
-
-        # Handles the clockwise vs counter-clockwise properties of the axis
-        if self.plot_ccw:
-            self._TaxPlot__axes.set_xlim([self.axis_lims[1],
-                                          self.axis_lims[0]])
-        else:
-            self._TaxPlot__axes.set_xlim(self.axis_lims)
-        self._TaxPlot__axes.set_ylim(self.axis_lims)
-        self._TaxPlot__axes.set_visible(self.show_axes)
-
-        # Adds a figure legend and a title.
-        self.render_legend()
-        self.render_title()
+#         # Adds a title
+#         self.render_title()
 
 
-class ScatterPlot(TaxPlot):
-    """Doc string here"""
-    # Sets up properties for the distribution axes
-    show_distribution = True
-    show_dist_hist = False
-    show_reg_line = False
-    match_reg_line = False
-    show_reg_equation = False
-    equation_position = ()
-    show_r2 = False
-    r2_position = ()
-    connect_points = False
-    x_axis_dimensions = (0.09375, 0.66667, 0.62500, 0.25000)
-    y_axis_dimensions = (0.75000, 0.12500, 0.18750, 0.50000)
-    markers = ['x', 'o', '.', '^', 's', '*']
-    __x_axes = None
-    __y_axes = None
-    __x_dist = None
-    __y_dist = []
-
-    def __init__(self, data, groups, samples, error=None, filename=None,
-                 **kwargs):
-        """Initializes a ScatterPlot instance"""
-        # Sets up the axis dimensions and figure dimensions, since the defaults
-        # are different for a scatter plot instance
-        self.fig_dims = (8, 6)
-        self.axis_dims = (0.09375, 0.125, 0.625, 0.666667)
-
-        # Initializes an instance of a ScatterPlot object
-        TaxPlot.__init__(self, data, groups, samples, error, filename,
-                         **kwargs)
-        # Updates the figure dimensions appropriately for the formatted axes.
-        # Current axes are removed and updated with the new dimensions
-        self._TaxPlot__fig.clf()
-        self.set_scatter_dimensions()
-
-    def check_scatter(self):
-        """Checks additional properties of the scatter instance are sane"""
-        # Checks show distribution
-        self.check_base()
-
-        # Checks the show distribution argument
-        if not isinstance(self.show_distribution, bool):
-            raise TypeError('show_distribution must be a bool')
-
-        # Checks the show_dist_hist argument
-        if not isinstance(self.show_dist_hist, bool):
-            raise TypeError('show_dist_hist must be a bool')
-
-        # Checks the show_reg_line argument
-        if not isinstance(self.show_reg_line, bool):
-            raise TypeError('show_reg_line must be a bool')
-
-        # Checks the match_reg_line argument
-        if not isinstance(self.match_reg_line, bool):
-            raise TypeError('match_reg_line must be a bool')
-
-        # Checks the show_r2 argument
-        if not isinstance(self.show_r2, bool):
-            raise TypeError('show_r2 must be a bool')
-
-        # Checks the connect_points argument
-        if not isinstance(self.connect_points, bool):
-            raise TypeError('connect_points must be a bool')
-
-        # Checks the equation_position argument
-        if not isinstance(self.equation_position, tuple):
-            raise TypeError('equation_position must be a tuple')
-
-        # Checks the r2_position argument
-        if not isinstance(self.r2_position, tuple):
-            raise TypeError('r2_position must be a tuple')
-
-        # Checks the x_axis_dimensions argument
-        if not isinstance(self.x_axis_dimensions, tuple):
-            raise TypeError('x_axis_dimensions must be a tuple')
-
-        # Checks the y_axis_dimensions argument
-        if not isinstance(self.y_axis_dimensions, tuple):
-            raise TypeError('y_axis_dimensions must be a tuple')
-
-        # Checks the marker class
-        if not isinstance(self.markers, (str, list, tuple)):
-            raise TypeError('markers must be a string or interable class '
-                            'of strings.')
-        if isinstance(self.markers, (list, tuple)):
-            for m in self.markers:
-                if not isinstance(m, str):
-                    raise ValueError('markers must be a string or interable'
-                                     ' class of strings.')
-
-    def set_scatter_dimensions(self):
-        """Updates the axis and figure dimensions for a distribution set."""
-        # Checks the object and properties
-        self.check_scatter()
-
-        # Updates the figure dimensions
-        self._TaxPlot__fig.set_size_inches(self.fig_dims)
-        # Adds the main axis to the figure
-        ax_pos = self.axis_dims
-        if isinstance(self._TaxPlot__axes, plt.Axes):
-            self._TaxPlot__axes.set_position(ax_pos)
-        else:
-            self._TaxPlot__axes = self._TaxPlot__fig.add_axes(ax_pos)
-        # Adds the x and y axes if appropriate
-        dist = self.show_distribution
-        if dist and isinstance(self._ScatterPlot__x_axes, plt.Axes):
-            self._ScatterPlot__x_axes.set_position(self.x_axis_dimensions)
-        elif dist:
-            self._ScatterPlot__x_axes = \
-                self._TaxPlot__fig.add_axes(self.x_axis_dimensions)
-
-        if dist and isinstance(self._ScatterPlot__y_axes, plt.Axes):
-            self._ScatterPlot__y_axes.set_position(self.y_axis_dimensions)
-        elif dist:
-            self._ScatterPlot__y_axes = \
-                self._TaxPlot__fig.add_axes(self.y_axis_dimensions)
-
-        # Removes any axes which should not be present
-        fig_axes = self._TaxPlot__fig.get_axes()
-        for axis in fig_axes:
-            # Determines if identified axis is an accepted axis
-            axis_bounds = axis.get_position().bounds
-            is_main = axis_bounds == self.axis_dims
-            is_x_ax = axis_bounds == self.x_axis_dimensions
-            is_y_ax = axis_bounds == self.y_axis_dimensions
-            if not (is_main and is_x_ax and is_y_ax):
-                ax = axis
-                ax.set_axis_off()
-
-# class BoxPlot(TaxPlot):
-#     """DOC STRING HERE"""
-#     # Sets up custom properties for the axes
-#     notch = True
-#     vertical = True
+# class PieChart(TaxPlot):
+#     """Doc String Here"""
+#     # Sets up pie chart specific properties
+#     plot_ccw = False
+#     start_angle = 90
+#     show_labels = False
+#     numeric_labels = False
+#     label_distance = 1.1
+#     __labels = None
+#     __defaults = {'show_error': None,
+#                   'fig_dims': (5, 3),
+#                   'axis_dims': (0.06, 0.1, 0.48, 0.8),
+#                   'save_properties': {},
+#                   'show_edge': False,
+#                   'colors': None,
+#                   'show_legend': True,
+#                   'legend_offset': (1.8, 0.75),
+#                   'legend_properties': {},
+#                   'show_axes': True,
+#                   'show_frame': True,
+#                   'xlim': [-1.1, 1.1],
+#                   'ylim': [-1.1, 1.1],
+#                   'xticks': None,
+#                   'yticks': None,
+#                   'xticklabels': None,
+#                   'yticklabels': None,
+#                   'show_title': False,
+#                   'title_text': None,
+#                   'title_properties': {},
+#                   'use_latex': False,
+#                   'latex_family': 'sans-serif',
+#                   'latex_font': ['Helvetica', 'Arial'],
+#                   'plot_ccw': False,
+#                   'start_angle': 90,
+#                   'axis_lims': [-1.1, 1.1],
+#                   'show_labels': False,
+#                   'numeric_labels': False,
+#                   'label_distance': 1.1}
 
 #     def __init__(self, data, groups, samples, filename=None, **kwargs):
-#         """Initializes a ScatterPlot instance"""
-#         # Sets up the figure and axis dimesnions for the boxplot
-        
+#         """Initializes a PieChart instance"""
+#         # Sets up the piechart with a legend.
+#         if 'fig_dims' not in kwargs:
+#             kwargs['fig_dims'] = (5, 3)
+#         if 'axis_dims' not in kwargs:
+#             kwargs['axis_dims'] = (0.06, 0.1, 0.48, 0.8)
+#         if 'show_legend' not in kwargs:
+#             kwargs['show_legend'] = True
+#         if 'legend_offset' not in kwargs:
+#             kwargs['legend_offset'] = (1.8, 0.75)
+#         if 'xlim' not in kwargs:
+#             kwargs['xlim'] = [-1.1, 1.1]
+#         if 'ylim' not in kwargs:
+#             kwargs['ylim'] = [-1.1, 1.1]
+#         # Initializes the object
+#         TaxPlot.__init__(self, data, groups, samples, error=None,
+#                          filename=filename, **kwargs)
+#         # Checks the initialized object
+#         self.check_piechart()
 
-    
+#     def check_piechart(self):
+#         """Checks the PieChart parameters are sane"""
+#         # Preforms an initial check of the data
+#         self.checkbase()
 
+#         # Checks the sanity of the plot_ccw argument
+#         if not isinstance(self.plot_ccw, bool):
+#             raise TypeError('plot_ccw must be boolian.')
+
+#         # Checks the sanity of the start_angle argument
+#         if not isinstance(self.start_angle, (int, float)):
+#             raise TypeError('start_angle must be an angle between 0 and '
+#                             '365 degrees.')
+#         if not 0 <= self.start_angle < 360:
+#             raise ValueError('start_angle must be an angle between 0 and '
+#                              '365 degrees.')
+
+#         # Checks the sanity of the show_labels argument
+#         if not isinstance(self.show_labels, bool):
+#             raise TypeError('show_labels must be boolian.')
+
+#         if not isinstance(self.numeric_labels, bool):
+#             raise TypeError('numeric_labels must be boolian.')
+
+#         # Checks the label distance
+#         if not isinstance(self.label_distance, (int, float)):
+#             raise TypeError('label distance must be numeric')
+
+#     def render_piechart(self):
+#         """Plots the data as a Pie Chart"""
+#         # Checks the object for rendering
+#         self.check_piechart()
+#         # Updates set fields
+#         self.update_colormap()
+#         self.update_dimensions()
+
+#         # Updates the latex rendering
+#         self.render_latex()
+
+#         # Warns the user if the data is more than one dimension
+#         data_shape = self.data.shape
+#         data_len = len(data_shape)
+#         if data_len > 1 and not (data_shape[0] == 1 or data_shape[1] == 1):
+#             warn('Data is a two-dimensional array. \nOnly the first '
+#                  'data column will be plotted.', UserWarning)
+#             self.data = self.data[:, 0]
+
+#         # Handles the data labels
+#         if self.show_labels and self.numeric_labels:
+#             labels = map(str, self.data)
+#         elif self.show_labels:
+#             labels = map(str, self.groups)
+#         else:
+#             labels = ['']*len(self.groups)
+
+#         # Plots the data clockwise
+#         [pie_patches, pie_labels] = \
+#             self._TaxPlot__axes.pie(x=self.data,
+#                                     labels=labels,
+#                                     labeldistance=self.label_distance,
+#                                     shadow=False,
+#                                     startangle=self.start_angle)
+
+#         # Colors the data
+#         label_font = self._TaxPlot__font_set['label']
+#         for idx, patch in enumerate(pie_patches):
+#             patch.set_facecolor(self._TaxPlot__colormap[idx, :])
+#             patch.set_edgecolor(self._TaxPlot__edgecolor[idx, :])
+#             pie_labels[idx].set_font_properties(label_font)
+
+#         # Updates the holding object
+#         self._TaxPlot__patches = pie_patches
+#         self._PieChart__labels = pie_labels
+
+#         # Handles the clockwise vs counter-clockwise properties of the axis
+#         if self.plot_ccw:
+#             self._TaxPlot__axes.set_xlim(reversed(self.xlim))
+#         else:
+#             self._TaxPlot__axes.set_xlim(self.xlim)
+#         self._TaxPlot__axes.set_ylim(self.ylim)
+#         self._TaxPlot__axes.set_visible(self.show_axes)
+
+#         # Adds a figure legend and a title.
+#         self.render_legend()
+#         self.render_title()
+
+#         

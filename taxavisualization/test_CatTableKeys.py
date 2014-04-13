@@ -11,11 +11,11 @@ __email__ = "Justine.Debelius@colorado.edu"
 
 from unittest import TestCase, main
 from numpy import array, mean, median, std, sum as nsum, sqrt, ndarray
-from americangut.CatTableKeys import (check_meta, check_data_array, CatTable,
-                                      return_original, return_binary,
-                                      return_binary_sum, return_mean,
-                                      return_median, return_stdev,
-                                      return_sum, return_sterr)
+from numpy.testing import assert_array_equal
+from CatTableKeys import (check_meta, check_data_array, CatTable,
+                          return_original, return_binary, return_binary_sum,
+                          return_mean, return_median, return_stdev,
+                          return_sum, return_sterr)
 
 
 class TestCatTableKey(TestCase):
@@ -154,17 +154,16 @@ class TestCatTableKey(TestCase):
         self.assertRaises(TypeError, check_data_array, self.data,
                           self.groups, 'self.samples')
 
-    def test_check_data_array_numeric_list(self):
-        """Tests check_data_array can handle a list of lists sanely"""
-        data_in = [[0.1, 0.2, 0.3],
-                   [0.2, 0.3, 0.4],
-                   [0.3, 0.4, 0.1],
-                   [0.4, 0.1, 0.2]]
-        samples = ['Harry', 'Ron', 'Hermione']
+    def test_check_data_array_vector(self):
+        """Tests check_data_array can convert a data vector"""
+        data_in = array([1, 2, 3, 4])
+        known_data = array([[1], [2], [3], [4]])
+        samples = ['Harry']
         groups = ['Snape', 'D_Malfoy', 'Umbridge', 'Voldemort']
         data_out = check_data_array(data_in, groups, samples)
         self.assertTrue(isinstance(data_out, ndarray))
-        self.assertTrue((array(data_in) == data_out).all())
+        self.assertEqual(data_out.shape, (4, 1))
+        assert_array_equal(known_data, data_out)
 
     def test_check_data_array_vector_unequal(self):
         """Tests check_data_array handles unequal numpy vectors correctly"""

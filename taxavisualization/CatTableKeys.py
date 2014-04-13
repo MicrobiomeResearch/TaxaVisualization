@@ -55,14 +55,11 @@ def check_data_array(data, row_names, col_names, data_id='data',
     """Checks the supplied data array and array names are sane"""
 
     # Checks the data types
-    if not isinstance(data, (list, ndarray)):
+    if not isinstance(data, (ndarray)):
         raise TypeError('%s must be a numpy array or list.' % data_id)
 
-    if isinstance(data, list) and isinstance(data[0], (list, float, int)):
-        data = array(data)
-
-    elif isinstance(data, list):
-        raise TypeError('%s must be a list of lists or a list of numbers.')
+    if isinstance(data, ndarray) and len(data.shape) == 1:
+        data = (array([[1]])*data).transpose()
 
     if not isinstance(row_names, (list, ndarray)):
         raise TypeError('%s must be a list or a numpy vector.' % row_id)
@@ -76,20 +73,15 @@ def check_data_array(data, row_names, col_names, data_id='data',
     # Checks the dimensions match
     num_n_rows = len(row_names)
     num_n_cols = len(col_names)
-    data_shape = data.shape
-    if len(data_shape) == 1:
-        if not data_shape[0] == num_n_rows:
-            raise ValueError('There must be a label for each row in the data.')
-
-    if len(data_shape) == 2:
-        num_d_rows = data_shape[0]
-        num_d_cols = data_shape[1]
-        if not num_d_rows == num_n_rows:
-            raise ValueError('There must be a label for each row in the data'
-                             ' matrix.')
-        elif not num_d_cols == num_n_cols:
-            raise ValueError('There must be a label for each column in the '
-                             'data matrix.')
+    num_d_rows = data.shape[0]
+    num_d_cols = data.shape[1]
+    if not num_d_rows == num_n_rows:
+        raise ValueError('There must be a label for each row in the data'
+                         ' matrix.')
+    elif not num_d_cols == num_n_cols:
+        raise ValueError('There must be a label for each column in the '
+                         '%s. \nYou have %i labels and %i '
+                         'columns.' % (data_id, num_n_cols, num_d_cols))
     # Returns a data array
     return data
 
